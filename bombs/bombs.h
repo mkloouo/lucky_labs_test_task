@@ -1,6 +1,9 @@
-//
-// Created by modnosum on 9/13/18.
-//
+/**
+ * @brief Explosions and fields.
+ *
+ * @date 09/13/2018
+ * @author Mykola Odnosumov
+ */
 
 #ifndef LUCKY_LABS_TEST_TASK_BOMBS_H
 #define LUCKY_LABS_TEST_TASK_BOMBS_H
@@ -8,59 +11,84 @@
 #include <stdexcept>
 #include <vector>
 
-namespace bombs
-{
-	using field_type = std::vector<int>;
-	using field_value_type = field_type::value_type;
-	using field_size_type = field_type::size_type;
+namespace bombs {
+	using FieldType = std::vector<int>;
+	using FieldValueType = FieldType::value_type;
+	using FieldSizeType = FieldType::size_type;
 
-	constexpr field_size_type DEFAULT_INITIAL_BOMBS = 10;
-	constexpr field_size_type FIELD_ROWS = 10;
-	constexpr field_size_type FIELD_COLS = 10;
-	constexpr field_size_type FIELD_SIZE = FIELD_ROWS * FIELD_COLS;
+	constexpr FieldSizeType kDefaultInitialBombs = 10;
+	constexpr FieldSizeType kFieldRow = 13;
+	constexpr FieldSizeType kFieldCols = 10;
+	constexpr FieldSizeType kFieldSize = kFieldRow * kFieldCols;
 
-	enum FieldDataType : field_value_type
-	{
-		Nothing = 10,
-		Bomb = 20,
-		Explosion = 0
+	/**
+	 * @brief Defines set of possible values of field data.
+	 */
+	enum FieldDataType : FieldValueType {
+		kBomb = -2, kEmpty = -1, kExploded = 0
 	};
 
-	struct invalid_field_size : std::runtime_error
-	{
-		explicit invalid_field_size(field_size_type size)
-				:runtime_error("invalid field size"),
-				 size(size) {}
+	struct InvalidFieldSize : std::runtime_error {
+		explicit InvalidFieldSize(FieldSizeType size)
+			:runtime_error("invalid field size"),
+			 size(size) {}
 
-		field_size_type size;
+		FieldSizeType size;
 	};
 
-	struct invalid_field_data : std::runtime_error
-	{
-		invalid_field_data(field_size_type column, field_size_type row,
-				field_value_type value)
-				:runtime_error("invalid field data"),
-				 column(column), row(row), value(value) {}
+	struct InvalidFieldData : std::runtime_error {
+		InvalidFieldData(FieldSizeType column, FieldSizeType row,
+						 FieldValueType value)
+			:runtime_error("invalid field data"),
+			 column(column),
+			 row(row),
+			 value(value) {}
 
-		field_size_type column;
-		field_size_type row;
-		field_value_type value;
+		FieldSizeType column;
+		FieldSizeType row;
+		FieldValueType value;
 	};
 
-	struct no_place_for_random_bombs : std::runtime_error
-	{
-		explicit no_place_for_random_bombs(field_size_type left)
-				:runtime_error("no space left to place random bombs"),
-				 left(left) {}
+	struct NoSpaceForRandomBombs : std::runtime_error {
+		explicit NoSpaceForRandomBombs(FieldSizeType left)
+			:runtime_error("no space left to place random bombs"),
+			 left(left) {}
 
-		field_size_type left;
+		FieldSizeType left;
 	};
 
-	void print_field(field_type& field);
+	/**
+	 * @brief Prints out field to std::cout.
+	 *
+	 * @param field Field of bombs, empty places, exploded places and numbers.
+	 */
+	void printField(FieldType& field);
 
-	void fill_with_random_bombs(field_type& field, unsigned int bombs);
+	/**
+	 * @brief Fills field randomly placing bombs_left number of bombs.
+	 *
+	 * @param field Field to fill with bombs
+	 * @param bombs_left Number of bombs to randomly place on the field
+	 * @throws InvalidFieldData When field cell contains something other than
+	 * predefined in FieldDataType
+	 * @throws NoSpaceForRandomBombs When there's no more space to
+	 * place a random bomb
+	 */
+	void fillWithRandomBombs(FieldType& field, unsigned int bombs_left);
 
-	void calculate(field_type& field, unsigned int bombs);
+	/**
+	 * @brief Calculates numbering on the map, after placing random
+	 * number of bombs and exploding them.
+	 *
+	 * @param field Field, possibly filled with bombs
+	 * @param bombs Number of bombs to be randomly placed
+	 * @throws InvalidFieldSize When field size does not match predefined one.
+	 * @throws InvalidFieldData When field cell contains something other than
+	 * predefined in FieldDataType or a number
+	 * @throws NoSpaceForRandomBombs When there's no more space to
+	 * place a random bomb
+	 */
+	void calculate(FieldType& field, unsigned int bombs);
 }
 
 #endif //LUCKY_LABS_TEST_TASK_BOMBS_H

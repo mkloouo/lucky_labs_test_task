@@ -1,8 +1,0 @@
-//
-// Created by modnosum on 9/12/18.
-//
-
-#ifndef LUCKY_LABS_TEST_TASK_BATTLESHIP_H
-#define LUCKY_LABS_TEST_TASK_BATTLESHIP_H
-
-#endif //LUCKY_LABS_TEST_TASK_BATTLESHIP_H

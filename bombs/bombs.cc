@@ -1,6 +1,6 @@
-//
-// Created by modnosum on 9/13/18.
-//
+/**
+ * @brief Bombs implementation details.
+ */
 
 #include "bombs.h"
 
@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iterator>
 #include <iostream>
+#include <iomanip>
 
 #define __ANSI_RESET_COLOR__ "\033[0m"
 
@@ -16,178 +17,196 @@
 #define __ANSI_BLUE_COLOR__ "\033[34m"
 #define __ANSI_CYAN_COLOR__ "\033[36m"
 
-namespace bombs
-{
-	namespace
-	{
-		field_value_type& get_field_data(field_type& field, field_size_type row,
-				field_size_type column)
-		{
-			return field[row * FIELD_ROWS + column];
+namespace bombs {
+	namespace {
+		unsigned getNumberLength(FieldSizeType number) {
+			unsigned length = 0;
+			for (; number; number /= 10, ++length);
+
+			return length;
+		}
+
+		FieldValueType& getFieldData(FieldType& field, FieldSizeType row,
+									 FieldSizeType column) {
+			return field[row * kFieldCols + column];
+		}
+
+		/**
+		 * @brief Explodes single bomb in horizontal and vertical directions.
+		 *
+		 * @param field Field where the bomb is placed on
+		 * @param row Bomb row
+		 * @param column Bomb column
+		 */
+		void explodeBomb(FieldType& field, FieldSizeType row,
+						 FieldSizeType column) {
+			getFieldData(field, row, column) = FieldDataType::kExploded;
+
+			if (row > 0 &&
+				getFieldData(field, row - 1, column) == FieldDataType::kEmpty) {
+				getFieldData(field, row - 1, column) = FieldDataType::kExploded;
+			}
+			if (row < (kFieldRow - 1) &&
+				getFieldData(field, row + 1, column) == FieldDataType::kEmpty) {
+				getFieldData(field, row + 1, column) = FieldDataType::kExploded;
+			}
+			if (column > 0 &&
+				getFieldData(field, row, column - 1) == FieldDataType::kEmpty) {
+				getFieldData(field, row, column - 1) = FieldDataType::kExploded;
+			}
+			if (column < (kFieldCols - 1) &&
+				getFieldData(field, row, column + 1) == FieldDataType::kEmpty) {
+				getFieldData(field, row, column + 1) = FieldDataType::kExploded;
+			}
+		}
+
+		/**
+		 * @brief Explodes all bombs.
+		 *
+		 * @param field Field where all the bombs explode
+		 * @throws InvalidFieldData Field contains something other than
+		 * Bomb, Empty space, Exploded space.
+		 */
+		void explodeAllBombs(FieldType& field) {
+			for (size_t i = 0; i < field.size(); ++i) {
+				switch (field[i]) {
+					case FieldDataType::kBomb:
+						explodeBomb(field, i / kFieldCols, i % kFieldCols);
+						break;
+					case FieldDataType::kEmpty:
+					case FieldDataType::kExploded: break;
+					default:
+						throw InvalidFieldData(i / kFieldCols, i % kFieldCols,
+											   field[i]);
+				}
+			}
 		}
 	}
 
-	void print_field(field_type& field)
-	{
-		for (bombs::field_size_type i = 0;
-			 i < field.size(); ++i)
-		{
-			if (i > 0 && (i % FIELD_COLS) == 0)
+	void printField(FieldType& field) {
+		int print_width = getNumberLength(kFieldRow) + 1;
+
+		for (bombs::FieldSizeType i = 0; i < field.size(); ++i) {
+			if (i > 0 && (i % kFieldCols) == 0) {
 				std::cout << std::endl;
-			if (field[i] == FieldDataType::Nothing)
-				std::cout << "n ";
-			else if (field[i] == FieldDataType::Explosion)
-				std::cout << __ANSI_EXPLOSION_COLOR__ "e " __ANSI_RESET_COLOR__;
-			else if (field[i] == FieldDataType::Bomb)
-				std::cout << __ANSI_RED_COLOR__ "b " __ANSI_RESET_COLOR__;
-			else if (field[i] == 1)
-				std::cout << __ANSI_CYAN_COLOR__ "1 " __ANSI_RESET_COLOR__;
-			else if (field[i] == 2)
-				std::cout << __ANSI_CYAN_COLOR__ "2 " __ANSI_RESET_COLOR__;
-			else if (field[i] == 3)
-				std::cout << __ANSI_BLUE_COLOR__ "3 " __ANSI_RESET_COLOR__;
-			else if (field[i] == 4)
-				std::cout << __ANSI_BLUE_COLOR__ "4 " __ANSI_RESET_COLOR__;
+			}
+
+			if (field[i] == FieldDataType::kEmpty) {
+				std::cout << std::left << std::setw(print_width) << "n";
+			} else if (field[i] == FieldDataType::kExploded) {
+				std::cout << __ANSI_EXPLOSION_COLOR__;
+				std::cout << std::left << std::setw(print_width) << "e";
+			} else if (field[i] == FieldDataType::kBomb) {
+				std::cout << __ANSI_RED_COLOR__;
+				std::cout << std::left << std::setw(print_width) << "b";
+			}
+#ifdef OTHER
+				else {
+				  if (field[i] == 1)
+					std::cout << __ANSI_CYAN_COLOR__;
+				  else if (field[i] == 2)
+					std::cout << __ANSI_CYAN_COLOR__;
+				  else if (field[i] == 3)
+					std::cout << __ANSI_BLUE_COLOR__;
+				  else if (field[i] == 4)
+					std::cout << __ANSI_BLUE_COLOR__;
+				  std::cout << std::left << std::setw(print_width) << field[i];
+				}
+#else
+			else {
+				std::cout << __ANSI_CYAN_COLOR__ << std::left
+						  << std::setw(print_width) << field[i];
+			}
+#endif
+			std::cout << __ANSI_RESET_COLOR__;
 		}
 		std::cout << std::endl;
 	}
 
-	void fill_with_random_bombs(field_type& field, unsigned int bombs)
-	{
-		static std::random_device random_device {};
+	void fillWithRandomBombs(FieldType& field, unsigned int bombs_left) {
+		static std::random_device random_device{};
 		static std::default_random_engine engine(random_device());
-		std::uniform_int_distribution<field_value_type>
-				field_position_dist(0, FIELD_COLS);
+		std::uniform_int_distribution<FieldValueType> field_position_dist(0,
+																		  kFieldCols);
 
-		for (field_size_type i = 0; bombs > 0; ++i)
-		{
-			if (i == field.size() - 1)
-			{
+		for (FieldSizeType i = 0, bombs_count = 0; bombs_left > 0; ++i) {
+			if (i == field.size() - 1) {
+				if (bombs_count == field.size() && bombs_left > 0) {
+					throw NoSpaceForRandomBombs(bombs_left);
+				}
+
 				i = 0;
+				bombs_count = 0;
 			}
 
-			switch (field[i])
-			{
-				case FieldDataType::Bomb:
+			switch (field[i]) {
+				case FieldDataType::kBomb: ++bombs_count;
 					break;
-				case FieldDataType::Nothing:
-					if (field_position_dist(engine) == 0)
-					{
-						field[i] = FieldDataType::Bomb;
-						--bombs;
+				case FieldDataType::kEmpty:
+					if (field_position_dist(engine) == 0) {
+						field[i] = FieldDataType::kBomb;
+						++bombs_count;
+						--bombs_left;
 					}
 					break;
-				default:
-					throw invalid_field_data(i / FIELD_ROWS, i % FIELD_COLS,
-							field[i]);
+				default: throw InvalidFieldData(i / kFieldCols, i % kFieldCols,
+												field[i]);
 			}
 		}
 	}
 
-	void
-	explode_bomb(field_type& field, field_size_type row, field_size_type column)
-	{
-		get_field_data(field, row, column) = FieldDataType::Explosion;
-
-		if (row > 0 && get_field_data(field, row - 1, column)
-				!= FieldDataType::Explosion)
-		{
-			get_field_data(field, row - 1, column) = FieldDataType::Explosion;
-		}
-		if (row < (FIELD_ROWS - 1) && get_field_data(field, row + 1, column)
-				!= FieldDataType::Explosion)
-		{
-			get_field_data(field, row + 1, column) = FieldDataType::Explosion;
-		}
-		if (column > 0 && get_field_data(field, row, column - 1)
-				!= FieldDataType::Explosion)
-		{
-			get_field_data(field, row, column - 1) = FieldDataType::Explosion;
-		}
-		if (column < (FIELD_COLS - 1) && get_field_data(field, row, column + 1)
-				!= FieldDataType::Explosion)
-		{
-			get_field_data(field, row, column + 1) = FieldDataType::Explosion;
-		}
-	}
-
-	void explode_all_bombs(field_type& field)
-	{
-		for (size_t i = 0; i < field.size(); ++i)
-		{
-			switch (field[i])
-			{
-				case FieldDataType::Bomb:
-					explode_bomb(field, i / FIELD_ROWS, i % FIELD_COLS);
-					break;
-				case FieldDataType::Nothing:
-				case FieldDataType::Explosion:
-					break;
-				default:
-					throw invalid_field_data(i / FIELD_ROWS, i % FIELD_COLS,
-							field[i]);
-			}
-		}
-	}
-
-	void fill_empty_space(field_type& field)
-	{
-		for (field_size_type col = 0, empty = 0; col < FIELD_COLS; ++col)
-		{
-			for (field_size_type row = 0; row < FIELD_ROWS; ++row)
-			{
-				if (get_field_data(field, row, col) == FieldDataType::Nothing)
-				{ ++empty; }
-				get_field_data(field, row, col) = FieldDataType::Explosion;
-			}
-
-			field_size_type to_fill_with_nums = FIELD_ROWS - empty;
-			for (field_size_type row = FIELD_ROWS - 1; empty > 0;
-				 --row, --empty)
-			{
-				get_field_data(field, row, col) = FieldDataType::Nothing;
-			}
-
-			for (field_size_type row = 0; row < to_fill_with_nums; ++row)
-			{
-				if (col > 0 && get_field_data(field, row, col - 1)
-						>= FieldDataType::Explosion
-						&& get_field_data(field, row, col - 1)
-								< FieldDataType::Nothing)
-				{
-					++get_field_data(field, row, col - 1);
-					++get_field_data(field, row, col);
+	void fillEmptySpace(FieldType& field) {
+		for (FieldSizeType col = 0, empty = 0; col < kFieldCols; ++col) {
+			for (FieldSizeType row = 0; row < kFieldRow; ++row) {
+				if (getFieldData(field, row, col) == FieldDataType::kEmpty) {
+					++empty;
 				}
-				if (row < (FIELD_ROWS - 1)
-						&& get_field_data(field, row + 1, col)
-								>= FieldDataType::Explosion
-						&& get_field_data(field, row + 1, col)
-								< FieldDataType::Nothing)
-				{
-					++get_field_data(field, row + 1, col);
-					++get_field_data(field, row, col);
+				getFieldData(field, row, col) = FieldDataType::kExploded;
+			}
+
+			FieldSizeType to_fill_with_nums = kFieldRow - empty;
+			for (FieldSizeType row = kFieldRow - 1; empty > 0; --row, --empty) {
+				getFieldData(field, row, col) = FieldDataType::kEmpty;
+			}
+
+			for (FieldSizeType row = 0; row < to_fill_with_nums; ++row) {
+#ifdef OTHER
+				if (col > 0 && getFieldData(field, row, col - 1)
+				  != FieldDataType::kEmpty) {
+				  ++getFieldData(field, row, col - 1);
+				  ++getFieldData(field, row, col);
 				}
+				if (row < (kFieldRow - 1)
+				  && getFieldData(field, row + 1, col)
+					!= FieldDataType::kEmpty) {
+				  ++getFieldData(field, row + 1, col);
+				  ++getFieldData(field, row, col);
+				}
+#else
+				getFieldData(field, row, col) = static_cast<FieldValueType>(
+					to_fill_with_nums - row);
+#endif
 			}
 		}
 	}
 
-	void calculate(field_type& field, unsigned int bombs)
-	{
-		if (field.size() != FIELD_SIZE)
-		{ throw invalid_field_size(field.size()); }
+	void calculate(FieldType& field, unsigned int bombs) {
+		if (field.size() != kFieldSize) {
+			throw InvalidFieldSize(field.size());
+		}
 
-		fill_with_random_bombs(field, bombs);
+		fillWithRandomBombs(field, bombs);
 #ifdef DEBUG
 		std::cout << "Before explosion:" << std::endl;
-		bombs::print_field(field);
+		bombs::printField(field);
 		std::cout << std::endl;
 #endif
-		explode_all_bombs(field);
+		explodeAllBombs(field);
 #ifdef DEBUG
 		std::cout << "After explosion:" << std::endl;
-		bombs::print_field(field);
+		bombs::printField(field);
 		std::cout << std::endl;
 #endif
-		fill_empty_space(field);
+		fillEmptySpace(field);
 	}
 }
